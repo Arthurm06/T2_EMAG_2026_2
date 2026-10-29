@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 FEELT31405 - Eletromagnetismo (2026-2)
 Trabalho 1: Sonda Capacitiva de Nivel no Conservador de um Transformador
 Data: 29/10/2026
-Turma: [TURMA]
 
 Alunos:
 - Arthur Montes Cuoco (12411EEL028)
