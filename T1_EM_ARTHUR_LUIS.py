@@ -7,13 +7,13 @@ Turma: [TURMA]
 
 Alunos:
 - Arthur Montes Cuoco (12411EEL028)
-- [NOME COMPLETO DO COLEGA] ([MATRICULA])
+- Luis Gustavo Oliveira Sena ([MATRICULA])
 
 Dependencias:
 - numpy: calculo matricial/vetorizado das camadas radiais e das faixas de nivel (h, hw, t)
 - matplotlib: geracao dos graficos G1 a G4 com formatacao de virgula decimal nos eixos
 Instalacao: pip install numpy matplotlib
-Execucao: python T1_EM_ARTHUR_COLEGA.py
+Execucao: python T1_EM_ARTHUR_LUIS.py
 """
 
 import numpy as np
