@@ -1,0 +1,106 @@
+Extração do roteiro: parte de cálculos e código (Trabalho 1, FEELT31405)
+0. Regras do professor que afetam o código
+Linguagem livre (Python, MATLAB, C++ etc.). Uma função separada e identificada por passo.
+Arquivo nomeado T1_EM_PRIMEIROS_NOMES_DUPLA, sem acento nem espaço, nomes separados por _.
+Cabeçalho em comentário com disciplina, turma, nº do trabalho, data, nomes completos e matrículas.
+Comentar as linhas não triviais e o uso de pacotes. Indicar as dependências e como executar.
+Rodar do início ao fim, sem intervenção. Deve gerar G1 a G4 e imprimir os resultados de cada passo identificados como “Passo N (item)”.
+Todos os gráficos precisam de título, eixos com grandeza e unidade e legenda quando houver mais de uma curva.
+Entrega até 03/11/2026, 23:59, no Teams.
+No relatório, os números decimais usam vírgula (o código imprime com a precisão que você já usa, 4 casas).
+1. Dados (Tabela 1)
+Grandeza	Valor
+H (comprimento útil)	0,80 m
+Raio da haste, a	5,0 mm (Ø 10,0)
+Raio interno do tubo, b	15,0 mm (Ø 30,0)
+Capa inicial	PTFE, t = 0,50 mm, εr = 2,1
+Raio externo da capa, a + t	5,5 mm
+εr ar / óleo / água	1,0 / 2,2 / 80
+ε0	8,854×10⁻¹² F/m
+Resolução da eletrônica	0,1 pF
+Fundo de escala	150 pF
+
+Materiais alternativos (Passo 6): poliimida εr = 3,4 e epóxi εr = 3,6. A espessura varia de 0,2 a 1,0 mm.
+
+2. Hipóteses do enunciado (não violar)
+Eletrostática e quase-estático.
+Dielétricos lineares, homogêneos, isotrópicos e sem perdas.
+Interfaces líquido-líquido e líquido-ar planas e horizontais.
+Efeitos de borda e capacitâncias parasitas desprezados.
+Propriedades constantes com a temperatura.
+No Passo 1(c) você deve listar também as suas hipóteses, além das do enunciado.
+3. Convenção crítica sobre h
+
+h é a altura TOTAL de líquido (óleo + água) medida a partir da base. Com água decantada, a água ocupa de 0 a hw e o óleo de hw a h. O colchete de h na Figura 1 mostra só (h − hw), mas vale a definição do texto.
+
+4. Modelo físico a implementar (Passo 1 e Passo 3)
+
+Por seção ao longo da altura (paralelo): cada trecho de comprimento L tem C’ em F/m, e C = Σ C'ᵢ·Lᵢ.
+
+Radialmente (série): camadas dielétricas coaxiais concêntricas, com C’ = 2π / Σ [ln(r_{k+1}/r_k) / ε_k].
+
+Seções:
+
+Sem água: trecho de óleo (0 a h) e trecho de ar (h a H).
+Com água: trecho de água (0 a hw), óleo (hw a h) e ar (h a H).
+
+Cada trecho tem radial = capa (a até a+t, ε_capa) em série com o meio (a+t até b, ε_meio).
+
+Justificativas pedidas no Passo 1(b):
+
+Série na radial: a interface dielétrico-dielétrico impõe D normal contínuo, e não há carga livre. Como o campo é radial, o mesmo D atravessa todas as camadas.
+Paralelo na altura: E tangencial é contínuo nas interfaces horizontais, então a mesma tensão se aplica a todos os trechos.
+5. Funções obrigatórias do Passo 3
+(a) Recebe os raios e os εr das camadas coaxiais e retorna C/L.
+Validação: raios 1,0, 3,0 e 5,0 mm; εr = 2,1 e 2,3; esperado ≈ 74,6 pF/m.
+Apresentar em tabela: valor obtido, valor de referência e erro relativo.
+(b) Retorna C(h, hw, propriedades da capa), com material e espessura como parâmetros, pois o Passo 6 varre os dois.
+(c) Dada uma capacitância medida, retorna o nível indicado considerando apenas óleo e ar (calibração de projeto). É a inversa de C(h) com hw = 0.
+6. Cálculos por passo
+
+Passo 2 (previsões, sem código): registrar e justificar, antes dos resultados:
+
+(a) a forma da curva C(h) com óleo limpo;
+(b) o efeito de aumentar a espessura da capa na sensibilidade;
+(c) se a água faz a sonda indicar nível maior ou menor que o real, e se 1 cm de água contribui mais ou menos que 1 cm de óleo.
+
+Passo 4 (óleo limpo, hw = 0, configuração inicial):
+
+(a) C(h) para 0 ≤ h ≤ H, mais C_vazio (h = 0), C_cheio (h = H) e a sensibilidade em pF/cm.
+(b) Verificar se C(h) é linear e explicar fisicamente.
+(c) Nível para L1 = 54,0 pF, L2 = 68,5 pF e L3 = 83,0 pF.
+(d) Menor variação de nível distinguível com 0,1 pF, isto é, 0,1 / sensibilidade.
+
+Passo 5 (água decantada, configuração inicial): dados da inspeção: vareta com h_real = 0,45 m e C = 85,5 pF.
+
+(a) Nível indicado pela função 3(c) com C = 85,5 pF e erro em relação a 0,45 m.
+(b) hw coerente com as duas medidas (h = 0,45 m e C = 85,5 pF). Resolver C(h = 0,45; hw) = 85,5 pF para hw.
+(c) Para h = 0,45 m, traçar o erro de indicação × hw de 0 a 10 cm.
+Erro causado por 1 cm de água.
+hw a partir do qual C > C_cheio.
+Para hw acima desse ponto, aplicar a inversa mesmo assim (extrapolação matemática).
+Marcar no gráfico dois pontos: hw em que C > C_cheio e hw em que C > 150 pF.
+(d) Comentário qualitativo: água tratada como dielétrico sem perdas, à luz de condutores e dielétricos, e o impacto na validade da medida.
+
+Passo 6 (revisão da capa):
+
+R1: C máx ≤ 150 pF na pior condição, com h = H (cheio) e hw = 10 cm.
+R2: menor variação de nível detectável (óleo limpo, 0,1 pF) ≤ 1,8 mm.
+(a) Verificar se a configuração inicial (PTFE, 0,5 mm) atende a R1 e R2.
+(b) Varredura de 3 materiais × espessura de 0,2 a 1,0 mm. Para cada um, calcular C máx (R1) e Δh mín (R2), com os limites indicados.
+(c) Escolher material e espessura, priorizando a maior sensibilidade entre as válidas, e justificar o compromisso entre sensibilidade ao óleo e influência da água.
+(d) Para a configuração escolhida, recalcular a calibração e o erro por 1 cm de água, e comparar com a inicial.
+7. Gráficos obrigatórios
+G	Conteúdo
+G1	C × h (óleo limpo, config. inicial), destacando C_vazio, C_cheio e as leituras L1 a L3
+G2	Erro de indicação × hw (h total = 0,45 m) com os dois marcadores do Passo 5(c)
+G3	Dois painéis: C máx (R1) × espessura e Δh mín (R2) × espessura, uma curva por material, com as linhas de limite 150 pF e 1,8 mm
+G4	C × h para hw = 0, 1 cm e 5 cm, comparando config. inicial e final
+8. Pontos de atenção
+Raio da haste = 5 mm e raio externo da capa = 5,5 mm. É fácil confundir diâmetro com raio.
+O trecho de água não entra em “calibração de projeto”, que usa só óleo e ar. Por isso o erro do Passo 5 aparece.
+O erro de indicação = h_indicado − h_real (definir o sinal e manter o mesmo em G2).
+Na capa mais espessa a sensibilidade cai, mas R1 fica mais folgado. É esse o compromisso do Passo 6(c).
+O relatório deve abrir a Seção 2 com um quadro-resumo (passo, resultado principal, figura/tabela).
+O Passo 3 do relatório precisa de fluxograma ou pseudocódigo e da justificativa das bibliotecas usadas.
+Relatório: 6 a 10 páginas (da Introdução às Referências), A4, margens de 2,5 cm, Times ou Arial 12, espaçamento 1,5, justificado, legendas em 10 pt, mínimo de 3 referências ABNT (livro-texto e slides das aulas obrigatórios).
