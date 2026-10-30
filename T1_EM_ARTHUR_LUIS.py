@@ -1,16 +1,7 @@
-"""
-FEELT31405 - Eletromagnetismo (2026-2)
-Trabalho 1: Sonda Capacitiva de Nivel no Conservador de um Transformador
-Data: 29/10/2026
+"""Trabalho 1 de Eletromagnetismo: sonda capacitiva de nivel.
 
-Alunos:
-- Arthur Montes Cuoco (12411EEL028)
-- Luis Gustavo Oliveira Sena ([MATRICULA])
-
-Dependencias:
-- numpy: calculo matricial/vetorizado das camadas radiais e das faixas de nivel (h, hw, t)
-- matplotlib: geracao dos graficos G1 a G4 com formatacao de virgula decimal nos eixos
-Instalacao: pip install numpy matplotlib
+Autores: Arthur Montes Cuoco e Luis Gustavo Oliveira Sena
+Dependencias: numpy e matplotlib
 Execucao: python T1_EM_ARTHUR_LUIS.py
 """
 
@@ -18,34 +9,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
-# -------------------------------------------------------------
-# Constantes fisicas e dimensoes da sonda (tudo no SI)
-# -------------------------------------------------------------
+# Constantes e dimensoes da sonda, em unidades do SI.
 EPS_0 = 8.854e-12       # permissividade do vacuo (F/m)
 H = 0.80                # comprimento util da sonda (m)
 
-# Dimensoes radiais (diametros 10 mm e 30 mm dados no enunciado -> raios a e b)
+# Os diametros informados no enunciado sao 10 mm e 30 mm.
 a = 0.0050              # raio da haste central (m) = 5.0 mm
 b = 0.0150              # raio interno do tubo externo (m) = 15.0 mm
 
-# Capa isolante inicial
+# Capa isolante inicial.
 t_init = 0.00050        # espessura inicial PTFE: 0.50 mm (m)
 eps_ptfe = 2.1          # permissividade relativa do PTFE
 eps_poliimida = 3.4     # poliimida (passo 6)
 eps_epoxi = 3.6         # epoxi (passo 6)
 
-# Permissividades relativas dos meios
+# Permissividades relativas dos meios.
 eps_ar = 1.0
 eps_oleo = 2.2
 eps_agua = 80.0
 
-# Especificacoes da eletronica
+# Especificacoes da eletronica.
 res_eletronica = 0.1e-12    # resolucao de 0.1 pF (F)
 fundo_escala = 150.0e-12    # fundo de escala de 150 pF (F)
 
 
 def fmt_virgula(x, pos):
-    """Substitui ponto por virgula nos eixos dos graficos (padrao ABNT)."""
+    """Formata os valores dos eixos com virgula decimal."""
     if abs(x) < 1e-12:
         return '0'
     return f"{x:g}".replace('.', ',')
@@ -53,9 +42,7 @@ def fmt_virgula(x, pos):
 formatter_virgula = FuncFormatter(fmt_virgula)
 
 
-# =============================================================
-# Passo 1 - Modelagem fisica
-# =============================================================
+# Passo 1 - Modelagem fisica.
 def passo1():
     print("=" * 60)
     print("Passo 1: Modelagem fisica da sonda e hipoteses")
@@ -79,9 +66,7 @@ def passo1():
     print("-" * 60 + "\n")
 
 
-# =============================================================
-# Passo 2 - Previsoes fisicas
-# =============================================================
+# Passo 2 - Previsoes fisicas.
 def passo2():
     print("=" * 60)
     print("Passo 2: Previsoes fisicas (antes de rodar os calculos)")
@@ -99,14 +84,9 @@ def passo2():
     print("-" * 60 + "\n")
 
 
-# =============================================================
-# Passo 3 - Funcoes de modelagem e validacao
-# =============================================================
+# Passo 3 - Funcoes de modelagem e validacao.
 def cap_por_comprimento(raios, eps_r):
-    """
-    Eq. (1): Capacitancia por metro linear de camadas coaxiais cilindricas em serie.
-    raios = [r1, r2, ..., r_{N+1}], eps_r = [eps_1, ..., eps_N]
-    """
+    """Calcula a capacitancia por metro de camadas coaxiais em serie."""
     r = np.asarray(raios, dtype=float)
     eps = np.asarray(eps_r, dtype=float)
     # somatorio de (1/eps_k) * ln(r_{k+1} / r_k)
@@ -115,24 +95,18 @@ def cap_por_comprimento(raios, eps_r):
 
 
 def capacitancia_total(h, hw, eps_capa, t):
-    """
-    Eq. (5): Capacitancia total da sonda com trechos em paralelo: agua (0 a hw),
-    oleo (hw a h) e ar (h a H).
-    """
+    """Calcula a capacitancia total dos trechos de agua, oleo e ar."""
     raios = [a, a + t, b]
     c_ar = cap_por_comprimento(raios, [eps_capa, eps_ar])
     c_oleo = cap_por_comprimento(raios, [eps_capa, eps_oleo])
     c_agua = cap_por_comprimento(raios, [eps_capa, eps_agua])
 
-    # expressao em paralelo (vetorizada para aceitar arrays de h e hw)
+    # Os trechos verticais ficam associados em paralelo.
     return c_agua * hw + c_oleo * (h - hw) + c_ar * (H - h)
 
 
 def nivel_indicado(C_medida, eps_capa, t):
-    """
-    Eq. (9): Nivel que a calibracao de projeto (oleo limpo) deduz a partir de C_medida.
-    Nao aplica clip para permitir a extrapolacao matematica do Passo 5c.
-    """
+    """Inverte a calibracao de oleo limpo para obter o nivel indicado."""
     raios = [a, a + t, b]
     c_ar = cap_por_comprimento(raios, [eps_capa, eps_ar])
     c_oleo = cap_por_comprimento(raios, [eps_capa, eps_oleo])
@@ -163,9 +137,7 @@ def passo3():
     print("Resultado: Validacao aprovada (assert OK).\n")
 
 
-# =============================================================
-# Passo 4 - Calibracao e leituras normais de campo
-# =============================================================
+# Passo 4 - Calibracao e leituras de campo.
 def passo4():
     print("=" * 60)
     print("Passo 4: Curva de calibracao (oleo limpo, config inicial)")
@@ -176,7 +148,7 @@ def passo4():
     cp_oleo = cap_por_comprimento(raios_init, [eps_ptfe, eps_oleo])
     cp_agua = cap_por_comprimento(raios_init, [eps_ptfe, eps_agua])
 
-    # (a) Capacitancias caracteristicas e sensibilidade
+    # (a) Capacitancias caracteristicas e sensibilidade.
     c_vazio = cp_ar * H
     c_cheio = cp_oleo * H
     S_si = cp_oleo - cp_ar
@@ -187,12 +159,12 @@ def passo4():
     print(f"Passo 4 (a): Sensibilidade S = {S_pf_cm:.4f} pF/cm ({S_si * 1e12:.4f} pF/m)")
     print(f"            (C'_ar = {cp_ar * 1e12:.4f} pF/m, C'_oleo = {cp_oleo * 1e12:.4f} pF/m, C'_agua = {cp_agua * 1e12:.4f} pF/m)")
 
-    # autoteste de seguranca
+    # Verificacoes dos valores de referencia.
     assert abs(c_vazio * 1e12 - 42.4388) < 0.01
     assert abs(c_cheio * 1e12 - 88.7559) < 0.01
     assert abs(S_pf_cm - 0.5790) < 0.005
 
-    # (b) Teste numerico de linearidade
+    # (b) Teste numerico de linearidade.
     h_vetor = np.linspace(0, H, 100)
     c_vetor = capacitancia_total(h_vetor, 0, eps_ptfe, t_init)
     c_reta = c_vazio + S_si * h_vetor
@@ -203,7 +175,7 @@ def passo4():
     print("             Explicacao: A resposta e perfeitamente linear porque a capacitancia equivale")
     print("             a soma de duas colunas associadas em paralelo com comprimentos lineares em h.")
 
-    # (c) Niveis para as leituras de campo
+    # (c) Niveis para as leituras de campo.
     leituras = [54.0e-12, 68.5e-12, 83.0e-12]
     nomes_l = ['L1', 'L2', 'L3']
     h_leituras = []
@@ -216,15 +188,13 @@ def passo4():
     assert abs(h_leituras[1] - 0.4501) < 0.001
     assert abs(h_leituras[2] - 0.7006) < 0.001
 
-    # (d) Menor variacao de nivel distinguivel
+    # (d) Menor variacao de nivel distinguivel.
     dh_min = res_eletronica / S_si
     dh_min_mm = dh_min * 1000.0
     print(f"Passo 4 (d): Delta_h_min = {dh_min_mm:.4f} mm ({dh_min:.4e} m)")
     assert abs(dh_min_mm - 1.7272) < 0.005
 
-    # ---------------------------------------------------------
-    # Grafico G1
-    # ---------------------------------------------------------
+    # Grafico G1.
     plt.figure(figsize=(7.5, 5))
     h_plot = np.linspace(0, H, 200)
     c_plot_pf = capacitancia_total(h_plot, 0, eps_ptfe, t_init) * 1e12
@@ -259,9 +229,7 @@ def passo4():
     return cp_ar, cp_oleo, cp_agua, c_vazio, c_cheio, S_si
 
 
-# =============================================================
-# Passo 5 - Investigacao da anomalia com agua decantada
-# =============================================================
+# Passo 5 - Investigacao da anomalia com agua decantada.
 def passo5(cp_ar, cp_oleo, cp_agua, c_vazio, c_cheio, S_si):
     print("=" * 60)
     print("Passo 5: Anomalia com agua decantada (config inicial)")
@@ -270,7 +238,7 @@ def passo5(cp_ar, cp_oleo, cp_agua, c_vazio, c_cheio, S_si):
     h_real = 0.45
     c_med = 85.5e-12
 
-    # (a) Nivel indicado e erro
+    # (a) Nivel indicado e erro.
     h_ind = nivel_indicado(c_med, eps_ptfe, t_init)
     erro = h_ind - h_real
 
@@ -279,12 +247,12 @@ def passo5(cp_ar, cp_oleo, cp_agua, c_vazio, c_cheio, S_si):
     assert abs(h_ind - 0.7438) < 0.001
     assert abs(erro - 0.2938) < 0.001
 
-    # (b) Espessura de agua hw coerente
+    # (b) Espessura de agua hw coerente.
     hw_calc = (c_med - c_vazio - S_si * h_real) / (cp_agua - cp_oleo)
     print(f"Passo 5 (b): Camada de agua hw    = {hw_calc:.4f} m ({hw_calc*100:.4f} cm)")
     assert abs(hw_calc - 0.0200) < 0.001
 
-    # (c) Limites de hw e extrapolacao
+    # (c) Limites de hw e extrapolacao.
     c_045_0 = cp_oleo * h_real + cp_ar * (H - h_real)
     hw_lim_cheio = (c_cheio - c_045_0) / (cp_agua - cp_oleo)
     hw_lim_150 = (fundo_escala - c_045_0) / (cp_agua - cp_oleo)
@@ -297,21 +265,19 @@ def passo5(cp_ar, cp_oleo, cp_agua, c_vazio, c_cheio, S_si):
     assert abs(hw_lim_cheio * 100 - 2.3856) < 0.01
     assert abs(hw_lim_150 * 100 - 9.5957) < 0.01
 
-    # Erro com 1 cm de agua (hw = 0.01 m)
+    # Erro com 1 cm de agua.
     c_1cm = capacitancia_total(h_real, 0.01, eps_ptfe, t_init)
     erro_1cm = nivel_indicado(c_1cm, eps_ptfe, t_init) - h_real
     print(f"Passo 5 (c): Erro por 1 cm de agua = {erro_1cm:+.4f} m ({erro_1cm*100:+.4f} cm)")
 
-    # (d) Nota sobre agua com perdas
+    # (d) Observacao sobre agua real.
     print("\nPasso 5 (d): [Nota sobre agua real com perdas]")
     print("             A agua livre decantada possui condutividade ionica (sigma > 0).")
     print("             Em baixa frequencia, a corrente de conducao pode superar a de deslocamento,")
     print("             gerando perdas dieletricas e alterando a impedancia lida pela ponte medidora.")
     print("             A discussao teorica aprofundada consta no relatorio.")
 
-    # ---------------------------------------------------------
-    # Grafico G2
-    # ---------------------------------------------------------
+    # Grafico G2.
     plt.figure(figsize=(7.5, 5))
     hw_sweep = np.linspace(0, 0.10, 200)
     c_hw = capacitancia_total(h_real, hw_sweep, eps_ptfe, t_init)
@@ -340,21 +306,19 @@ def passo5(cp_ar, cp_oleo, cp_agua, c_vazio, c_cheio, S_si):
     return erro_1cm
 
 
-# =============================================================
-# Passo 6 - Revisao de projeto da capa isolante
-# =============================================================
+# Passo 6 - Revisao de projeto da capa isolante.
 def passo6(erro_1cm_init):
     print("=" * 60)
     print("Passo 6: Revisao da capa isolante da sonda")
     print("=" * 60)
 
-    # (a) Verificacao da config inicial
+    # (a) Verificacao da configuracao inicial.
     raios_init = [a, a + t_init, b]
     cp_ar_init = cap_por_comprimento(raios_init, [eps_ptfe, eps_ar])
     cp_oleo_init = cap_por_comprimento(raios_init, [eps_ptfe, eps_oleo])
     cp_agua_init = cap_por_comprimento(raios_init, [eps_ptfe, eps_agua])
 
-    # Condicao mais critica de R1: conservador cheio (h = H) com 10 cm de agua (hw = 0.10 m)
+    # R1: conservador cheio com 10 cm de agua.
     c_max_init = cp_agua_init * 0.10 + cp_oleo_init * (H - 0.10)
     dh_min_init_mm = (res_eletronica / (cp_oleo_init - cp_ar_init)) * 1000.0
 
@@ -369,7 +333,7 @@ def passo6(erro_1cm_init):
     assert stat_r1_init == "REPROVADO"
     assert stat_r2_init == "APROVADO"
 
-    # (b) Varredura parametrica: materiais e espessuras (0.2 mm a 1.0 mm, passo 0.01 mm)
+    # (b) Varredura de materiais e espessuras.
     materiais = {
         'PTFE': eps_ptfe,
         'Poliimida': eps_poliimida,
@@ -391,9 +355,9 @@ def passo6(erro_1cm_init):
             c_oleo_sw = cap_por_comprimento(raios_sw, [eps_mat, eps_oleo])
             c_agua_sw = cap_por_comprimento(raios_sw, [eps_mat, eps_agua])
 
-            # R1: C_max na condicao mais severa (Eq. 14)
+            # R1: capacitancia maxima na condicao mais severa.
             c_max_sw = c_agua_sw * 0.10 + c_oleo_sw * (H - 0.10)
-            # R2: Delta_h_min com oleo limpo
+            # R2: menor variacao detectavel com oleo limpo.
             s_sw = c_oleo_sw - c_ar_sw
             s_cm = s_sw * 1e12 / 100.0
             dh_sw_mm = (res_eletronica / s_sw) * 1000.0
@@ -420,7 +384,7 @@ def passo6(erro_1cm_init):
             'S': np.array(s_vals)
         }
 
-    # (c) Escolha automatica da melhor config (maior S entre as validas)
+    # (c) Escolha da maior sensibilidade entre as configuracoes validas.
     print(f"\nPasso 6 (c): Configuracoes que atendem R1 e R2: {len(validas)}")
     validas.sort(key=lambda x: x['S_cm'], reverse=True)
     escolhida = validas[0]
@@ -438,7 +402,7 @@ def passo6(erro_1cm_init):
     print(f"    Delta_h  : {escolhida['dh_min']:.4f} mm (R2 <= 1,8 mm: OK)")
     print(f"    Sensib. S: {escolhida['S_cm']:.4f} pF/cm")
 
-    # (d) Recalibracao da config final e comparacao
+    # (d) Recalibracao da configuracao final.
     t_fin = escolhida['t_m']
     eps_fin = escolhida['eps']
     raios_fin = [a, a + t_fin, b]
@@ -449,7 +413,7 @@ def passo6(erro_1cm_init):
     c_cheio_fin = cp_oleo_fin * H
     S_fin_si = cp_oleo_fin - cp_ar_fin
 
-    # Erro com 1 cm de agua em h = 0.45 m na config final
+    # Erro com 1 cm de agua na configuracao final.
     c_1cm_fin = capacitancia_total(0.45, 0.01, eps_fin, t_fin)
     erro_1cm_fin = nivel_indicado(c_1cm_fin, eps_fin, t_fin) - 0.45
 
@@ -464,9 +428,7 @@ def passo6(erro_1cm_init):
     print(f"{'Erro p/ 1 cm agua (m)':<28} | {erro_1cm_init:<+22.4f} | {erro_1cm_fin:<+22.4f}")
     print(f"Reducao no impacto da agua: {(1 - erro_1cm_fin/erro_1cm_init)*100:.2f}%")
 
-    # ---------------------------------------------------------
-    # Grafico G3
-    # ---------------------------------------------------------
+    # Grafico G3.
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     t_mm_plot = t_vetor * 1000.0
 
@@ -499,15 +461,13 @@ def passo6(erro_1cm_init):
     plt.close()
     print("Salvo: G3.png")
 
-    # ---------------------------------------------------------
-    # Grafico G4
-    # ---------------------------------------------------------
+    # Grafico G4.
     plt.figure(figsize=(7.5, 5.2))
     cenarios_hw = [0.0, 0.01, 0.05]
     cores_cen = ['navy', 'darkorange', 'purple']
 
     for hw_val, cor in zip(cenarios_hw, cores_cen):
-        # Conforme o enunciado: para cada hw, plotar apenas h >= hw
+        # O nivel total precisa ser maior ou igual a hw.
         h_range = np.linspace(hw_val, H, 200)
         c_i = capacitancia_total(h_range, hw_val, eps_ptfe, t_init) * 1e12
         c_f = capacitancia_total(h_range, hw_val, eps_fin, t_fin) * 1e12
@@ -531,9 +491,7 @@ def passo6(erro_1cm_init):
     print("Salvo: G4.png\n")
 
 
-# =============================================================
-# Execucao sequencial (Main)
-# =============================================================
+# Execucao sequencial.
 def main():
     print("Iniciando execucao do script de Eletromagnetismo...\n")
     passo1()
