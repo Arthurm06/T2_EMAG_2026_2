@@ -2,7 +2,8 @@
 """
 Gerador do Relatório em PDF – Trabalho 2 de Eletromagnetismo (FEELT31405)
 Gera os diagramas auxiliares (esquema do núcleo e fluxograma) e compila o
-arquivo T2_EM_ARTHUR_LUIS.pdf usando ReportLab.
+arquivo T2_EM_ARTHUR_LUIS.pdf usando ReportLab, com Capa, Sumário automático
+e paginação de conteúdo (6 a 10 páginas úteis).
 
 Dependências:
   - matplotlib
@@ -21,9 +22,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle,
-    PageBreak, KeepTogether
+    BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, Image,
+    Table, TableStyle, PageBreak, KeepTogether
 )
+from reportlab.platypus.tableofcontents import TableOfContents
 
 PASTA_TRABALHO = os.path.dirname(os.path.abspath(__file__))
 PDF_SAIDA = os.path.join(PASTA_TRABALHO, "T2_EM_ARTHUR_LUIS.pdf")
@@ -36,6 +38,46 @@ pdfmetrics.registerFont(TTFont("TNR-BoldItalic", r"C:\Windows\Fonts\timesbi.ttf"
 pdfmetrics.registerFontFamily(
     "TNR", normal="TNR", bold="TNR-Bold", italic="TNR-Italic", boldItalic="TNR-BoldItalic"
 )
+
+
+class RelatorioDocTemplate(BaseDocTemplate):
+    """Template com captura automática de títulos H1/H2 para o Sumário."""
+
+    def __init__(self, filename, **kwargs):
+        super().__init__(filename, **kwargs)
+        frame = Frame(
+            self.leftMargin, self.bottomMargin,
+            self.width, self.height,
+            id="normal", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0
+        )
+        template = PageTemplate(id="main", frames=[frame], onPage=desenhar_cabecalho_rodape)
+        self.addPageTemplates([template])
+
+    def afterFlowable(self, flowable):
+        if isinstance(flowable, Paragraph):
+            style_name = flowable.style.name
+            text = flowable.getPlainText()
+            # Páginas 1 (Capa) e 2 (Sumário) não entram na contagem útil;
+            # conteúdo começa na página física 3 -> Página 1 útil.
+            pagina_util = max(1, self.page - 2)
+            if style_name == "H1":
+                self.notify("TOCEntry", (0, text, pagina_util))
+            elif style_name == "H2":
+                self.notify("TOCEntry", (1, text, pagina_util))
+
+
+def desenhar_cabecalho_rodape(canvas, doc):
+    """Numera apenas as páginas de conteúdo (a partir da página física 3)."""
+    page_num = canvas.getPageNumber()
+    if page_num <= 2:
+        return
+    canvas.saveState()
+    canvas.setFont("TNR", 10)
+    canvas.setFillColor(colors.HexColor("#444444"))
+    canvas.drawRightString(A4[0] - 2.5 * cm, 1.5 * cm, f"Página {page_num - 2}")
+    canvas.drawString(2.5 * cm, A4[1] - 1.7 * cm,
+                      "FEELT31405 – Eletromagnetismo | Trabalho 2 (2026-2)")
+    canvas.restoreState()
 
 
 def gerar_esquema_nucleo(pasta_tmp: str) -> str:
@@ -139,20 +181,6 @@ def gerar_fluxograma(pasta_tmp: str) -> str:
     return out
 
 
-def desenhar_cabecalho_rodape(canvas, doc):
-    """Numera páginas a partir da página 2 (conteúdo), omitindo da capa."""
-    page_num = canvas.getPageNumber()
-    if page_num == 1:
-        return
-    canvas.saveState()
-    canvas.setFont("TNR", 10)
-    canvas.setFillColor(colors.HexColor("#444444"))
-    canvas.drawRightString(A4[0] - 2.5 * cm, 1.5 * cm, f"Página {page_num - 1}")
-    canvas.drawString(2.5 * cm, A4[1] - 1.7 * cm,
-                      "FEELT31405 – Eletromagnetismo | Trabalho 2 (2026-2)")
-    canvas.restoreState()
-
-
 def criar_estilos():
     base = getSampleStyleSheet()
     return {
@@ -168,25 +196,37 @@ def criar_estilos():
             "CapaInfo", parent=base["Normal"], fontName="TNR", fontSize=12,
             leading=18, alignment=TA_CENTER
         ),
+        "SumarioTitulo": ParagraphStyle(
+            "SumarioTitulo", parent=base["Normal"], fontName="TNR-Bold", fontSize=14,
+            leading=20, alignment=TA_CENTER, spaceBefore=6, spaceAfter=16
+        ),
+        "TOC0": ParagraphStyle(
+            "TOC0", parent=base["Normal"], fontName="TNR-Bold", fontSize=12,
+            leading=18, leftIndent=0, firstLineIndent=0, spaceBefore=6
+        ),
+        "TOC1": ParagraphStyle(
+            "TOC1", parent=base["Normal"], fontName="TNR", fontSize=11.5,
+            leading=17, leftIndent=18, firstLineIndent=0, spaceBefore=2
+        ),
         "H1": ParagraphStyle(
             "H1", parent=base["Heading1"], fontName="TNR-Bold", fontSize=13,
-            leading=18, spaceBefore=14, spaceAfter=6, alignment=TA_LEFT
+            leading=18, spaceBefore=12, spaceAfter=5, alignment=TA_LEFT, keepWithNext=True
         ),
         "H2": ParagraphStyle(
             "H2", parent=base["Heading2"], fontName="TNR-Bold", fontSize=12,
-            leading=17, spaceBefore=10, spaceAfter=4, alignment=TA_LEFT
+            leading=17, spaceBefore=9, spaceAfter=4, alignment=TA_LEFT, keepWithNext=True
         ),
         "Corpo": ParagraphStyle(
             "Corpo", parent=base["Normal"], fontName="TNR", fontSize=12,
-            leading=18, alignment=TA_JUSTIFY, spaceAfter=6
+            leading=18, alignment=TA_JUSTIFY, spaceAfter=5
         ),
         "Equacao": ParagraphStyle(
             "Equacao", parent=base["Normal"], fontName="TNR-Italic", fontSize=11.5,
-            leading=16, alignment=TA_CENTER, spaceBefore=4, spaceAfter=6
+            leading=16, alignment=TA_CENTER, spaceBefore=3, spaceAfter=5
         ),
         "Legenda": ParagraphStyle(
             "Legenda", parent=base["Normal"], fontName="TNR-Italic", fontSize=10,
-            leading=12, alignment=TA_CENTER, spaceBefore=3, spaceAfter=8
+            leading=12, alignment=TA_CENTER, spaceBefore=2, spaceAfter=7
         ),
         "TabelaCel": ParagraphStyle(
             "TabelaCel", parent=base["Normal"], fontName="TNR", fontSize=9.5,
@@ -198,7 +238,7 @@ def criar_estilos():
         ),
         "Ref": ParagraphStyle(
             "Ref", parent=base["Normal"], fontName="TNR", fontSize=11,
-            leading=15, alignment=TA_LEFT, spaceAfter=5
+            leading=15, alignment=TA_LEFT, spaceAfter=4
         ),
     }
 
@@ -224,7 +264,7 @@ def fazer_tabela(dados, larguras, estilos):
 
 def construir_pdf():
     st = criar_estilos()
-    doc = SimpleDocTemplate(
+    doc = RelatorioDocTemplate(
         PDF_SAIDA, pagesize=A4,
         leftMargin=2.5 * cm, rightMargin=2.5 * cm,
         topMargin=2.5 * cm, bottomMargin=2.5 * cm,
@@ -238,7 +278,9 @@ def construir_pdf():
         img_flux = gerar_fluxograma(pasta_tmp)
         story = []
 
-        # CAPA
+        # =====================================================================
+        # CAPA (Página física 1 — não conta nas 6 a 10 páginas)
+        # =====================================================================
         story.append(Paragraph("UNIVERSIDADE FEDERAL DE UBERLÂNDIA", st["CapaInst"]))
         story.append(Paragraph("FACULDADE DE ENGENHARIA ELÉTRICA (FEELT)", st["CapaInst"]))
         story.append(Spacer(1, 1.2 * cm))
@@ -262,6 +304,19 @@ def construir_pdf():
         story.append(Paragraph("Uberlândia – MG<br/>08/12/2026", st["CapaInfo"]))
         story.append(PageBreak())
 
+        # =====================================================================
+        # SUMÁRIO (Página física 2 — não conta nas 6 a 10 páginas)
+        # =====================================================================
+        story.append(Paragraph("SUMÁRIO", st["SumarioTitulo"]))
+        toc = TableOfContents()
+        toc.levelStyles = [st["TOC0"], st["TOC1"]]
+        toc.dotsMinLevel = 0
+        story.append(toc)
+        story.append(PageBreak())
+
+        # =====================================================================
+        # CONTEÚDO (Página 1 útil em diante — 6 a 10 páginas)
+        # =====================================================================
         # 1 INTRODUÇÃO
         story.append(Paragraph("1 Introdução", st["H1"]))
         story.append(Paragraph(
@@ -289,7 +344,7 @@ def construir_pdf():
         ))
 
         story.append(KeepTogether([
-            Image(img_nuc, width=W_UTIL * 0.96, height=W_UTIL * 0.47),
+            Image(img_nuc, width=W_UTIL * 0.94, height=W_UTIL * 0.46),
             Paragraph(
                 "Figura 1 – Esquema do núcleo magnético de uma só malha com bobina de ensaio, "
                 "entreferro g, percurso médio ℓ<sub>fe</sub> = 0,24 m e seção transversal A = 3,00 cm² "
@@ -323,7 +378,7 @@ def construir_pdf():
         story.append(KeepTogether([
             Paragraph("Tabela 1 – Dados geométricos, materiais e requisitos do problema.", st["Legenda"]),
             fazer_tabela(tab1, [W_UTIL * 0.40, W_UTIL * 0.60], st),
-            Spacer(1, 0.3 * cm)
+            Spacer(1, 0.25 * cm)
         ]))
 
         # 2 DESENVOLVIMENTO
@@ -346,7 +401,7 @@ def construir_pdf():
         story.append(KeepTogether([
             Paragraph("Tabela 2 – Quadro-resumo dos resultados do desenvolvimento.", st["Legenda"]),
             fazer_tabela(tab2, [W_UTIL * 0.27, W_UTIL * 0.51, W_UTIL * 0.22], st),
-            Spacer(1, 0.3 * cm)
+            Spacer(1, 0.25 * cm)
         ]))
 
         # 2.1 Passo 1
@@ -447,7 +502,7 @@ def construir_pdf():
         ))
 
         story.append(KeepTogether([
-            Image(img_flux, width=W_UTIL * 0.86, height=W_UTIL * 0.54),
+            Image(img_flux, width=W_UTIL * 0.84, height=W_UTIL * 0.52),
             Paragraph("Figura 2 – Fluxograma do algoritmo implementado para os Passos 3 a 6.", st["Legenda"])
         ]))
 
@@ -468,7 +523,7 @@ def construir_pdf():
         story.append(KeepTogether([
             Paragraph("Tabela 3 – Resíduos e erros relativos da validação numérica do Passo 3.", st["Legenda"]),
             fazer_tabela(tab3, [W_UTIL*0.26, W_UTIL*0.22, W_UTIL*0.22, W_UTIL*0.16, W_UTIL*0.14], st),
-            Spacer(1, 0.3 * cm)
+            Spacer(1, 0.25 * cm)
         ]))
 
         # 2.4 Passo 4
@@ -497,7 +552,7 @@ def construir_pdf():
         story.append(KeepTogether([
             Paragraph("Tabela 4 – Resultados da configuração inicial (Ferrite, N = 200) nas duas folgas.", st["Legenda"]),
             fazer_tabela(tab4, [W_UTIL * 0.34, W_UTIL * 0.33, W_UTIL * 0.33], st),
-            Spacer(1, 0.3 * cm)
+            Spacer(1, 0.25 * cm)
         ]))
 
         story.append(Paragraph(
@@ -563,7 +618,7 @@ def construir_pdf():
         story.append(KeepTogether([
             Paragraph("Tabela 5 – Comparação energética entre condição nominal e folga estimada (*valores extrapolados fora da região linear).", st["Legenda"]),
             fazer_tabela(tab5, [W_UTIL*0.24, W_UTIL*0.20, W_UTIL*0.13, W_UTIL*0.13, W_UTIL*0.14, W_UTIL*0.16], st),
-            Spacer(1, 0.3 * cm)
+            Spacer(1, 0.25 * cm)
         ]))
 
         story.append(Paragraph(
@@ -609,7 +664,7 @@ def construir_pdf():
         story.append(KeepTogether([
             Paragraph("Tabela 6 – Única tabela de configurações válidas (Ferrite e Pó de ferro: nenhuma configuração válida).", st["Legenda"]),
             fazer_tabela(tab6, [W_UTIL*0.18, W_UTIL*0.09, W_UTIL*0.13, W_UTIL*0.15, W_UTIL*0.15, W_UTIL*0.15, W_UTIL*0.15], st),
-            Spacer(1, 0.3 * cm)
+            Spacer(1, 0.25 * cm)
         ]))
 
         img_g2 = os.path.join(PASTA_TRABALHO, "G2.png")
@@ -687,6 +742,7 @@ def construir_pdf():
         ))
 
         # REFERÊNCIAS
+        story.append(PageBreak())
         story.append(Paragraph("Referências", st["H1"]))
         story.append(Paragraph(
             "FITZGERALD, A. E.; KINGSLEY JR., C.; UMANS, S. D. <b>Máquinas elétricas</b>: com "
@@ -703,7 +759,7 @@ def construir_pdf():
             st["Ref"]
         ))
 
-        doc.build(story, onFirstPage=desenhar_cabecalho_rodape, onLaterPages=desenhar_cabecalho_rodape)
+        doc.multiBuild(story)
         print(f"PDF gerado com sucesso em: {PDF_SAIDA}")
 
 
